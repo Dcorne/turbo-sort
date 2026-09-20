@@ -11,10 +11,11 @@ No personal media library was used or modified.
    underscore-separated episode name was rejected because regular-expression
    word boundaries treat underscores as word characters.
 2. Corrected separators: 42 tests, 41 passed, one skipped.
-3. Expanded failure coverage: **50 tests, 49 passed, one skipped**. Includes
+3. Expanded failure coverage: **54 tests, 53 passed, one skipped**. Includes
    2,000 deterministic generated episode names, CLI preview/apply/repeat,
    collisions, language subtitles, dates, source changes, permission errors,
-   simulated disk-full and corrupt-copy failures, and exclusive-publication races.
+   simulated disk-full and corrupt-copy failures, exclusive-publication races,
+   and the interactive configuration wizard.
 
 The skipped test requires creating a real symbolic link, which this local
 Windows environment does not allow. Python compilation checks also passed.

@@ -23,6 +23,15 @@ Alternatively edit a copy of config.example.toml and run:
   python turbo_sort.py --config config.toml
   python turbo_sort.py --config config.toml --apply
 
+If you prefer a guided setup, run:
+
+  python turbo_setup.py
+
+The wizard asks for folders and naming choices such as padded `S03` versus
+`S3`, and `Season 3` versus `S03`. It previews an example, validates the
+choices, writes `config.toml` atomically, and saves an existing configuration
+as `config.toml.bak`. It never edits this Python sorter or moves files.
+
 CLI settings override configuration entries. Relative paths are relative to
 the current working directory. Neither a TOML file nor an import can turn on
 --apply: it must be explicitly supplied on the command line.
@@ -119,6 +128,7 @@ trusted, completed files with one organizer instance at a time.
 Tests
 -----
   python -m unittest -v test_turbo_sort
+  python -m unittest -v test_turbo_setup
   python beta_scenarios.py
 
 All tests create disposable temporary directories and never use your media

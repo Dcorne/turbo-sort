@@ -21,4 +21,6 @@ cleanup, overwrite, obsolete desktop notifications and guessed compact episode
 numbers. See README.txt for migration and operational limitations.
 
 Add regression, generated-filename, failure-injection and repeated CLI beta tests.
+Add `turbo_setup.py`, a guided configuration wizard that previews choices,
+validates templates and paths, backs up existing TOML, and never edits code.
 Earlier release notes remain in changelog.txt.
