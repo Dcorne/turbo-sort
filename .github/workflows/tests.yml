@@ -25,8 +25,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Compile
-        run: python -m compileall -q turbo_sort.py test_turbo_sort.py beta_scenarios.py
+        run: python -m compileall -q turbo_sort.py turbo_setup.py test_turbo_sort.py test_turbo_setup.py beta_scenarios.py
       - name: Regression tests
-        run: python -m unittest -v test_turbo_sort
+        run: python -m unittest -v test_turbo_sort test_turbo_setup
       - name: Two repeated beta scenarios
         run: python beta_scenarios.py
