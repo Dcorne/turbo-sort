@@ -1,0 +1,32 @@
+name: Python compatibility tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11', '3.12', '3.13', '3.14']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile
+        run: python -m compileall -q turbo_sort.py test_turbo_sort.py beta_scenarios.py
+      - name: Regression tests
+        run: python -m unittest -v test_turbo_sort
+      - name: Two repeated beta scenarios
+        run: python beta_scenarios.py
