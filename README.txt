@@ -1,122 +1,125 @@
-This is a very fast parsing script for downloaded TV shows and movies. It will use scene-standard naming conventions (and a lot of nonstandard ones, too) to match TV shows and movies and rename / move them as you like.
+Turbo Sort 3.0 beta
+===================
 
-My script now supports format strings similar to SABnzbd! It should also work on all platforms that have a Python interpreter available, though you will need to change the directory structure of the format strings from using \\ to / for it to work on UNIX.
+Preview-first movie and TV file organization for Python 3.11 and newer.
+No third-party packages are required. Derived from Michael Riha's turbo_sort
+v2.3; GPL-3.0-or-later (see LICENSE.txt). This beta changes the configuration
+interface and intentionally removes destructive legacy behavior.
 
-Since this script is written in python, you will need a python interpreter installed on your system. If you do not have one, you can get one from http://python.org/.
-Getting Started
+Quick start
+-----------
+Install a supported Python 3.11+ interpreter. Open a terminal in this folder.
+Preview (no files or directories are changed):
 
- 1. Download archive
- 2. Extract somewhere
- 3. Open turbo_sort.py in a text editor
- 4. Edit the variables at the top of the script per the README or see below for what the options do.
- 5. Save & Run the script
+  python turbo_sort.py --source "C:\Downloads\Completed" --tv "C:\Media\TV" --movies "C:\Media\Movies"
 
-Options to Consider:
+After reviewing the output, repeat the command with --apply to perform moves.
+The default minimum video size is 100 MiB. Use --min-size-mb 0 for small samples.
+Only process completed downloads; stop downloaders or other writers first.
+Source and destination directories must be separate, non-overlapping trees.
 
-+---------+
-| General |
-+---------+
+Alternatively edit a copy of config.example.toml and run:
 
-tvdest
-   TV shows will be moved to tvdest/undated_fs or tvdest/dated_fs
+  python turbo_sort.py --config config.toml
+  python turbo_sort.py --config config.toml --apply
 
-   By default these locations are "tvdest\Show Name\Season #\Show Name S## E##.ext"
-                              and "      ...       \Show Name Mar 03 2012.ext"
+CLI settings override configuration entries. Relative paths are relative to
+the current working directory. Neither a TOML file nor an import can turn on
+--apply: it must be explicitly supplied on the command line.
 
-moviedest
-   Movies will be moved to moviedest\movie_fs
-   By default this location is "moviedest\Movie Name (Year).ext"
+Behavior and safety
+-------------------
+* A complete plan is built before file moves start.
+* Existing destinations are never overwritten, even when they appear after
+  planning. Multiple inputs targeting one name are all skipped.
+* Each move copies into a temporary file in the destination directory,
+  flushes it, checks its size and SHA-256 hash, publishes it without replacing
+  another file, and only then removes the unchanged source.
+* Subtitle languages and qualifiers survive: .en.srt and .fr.forced.srt stay
+  separate. Subtitles only move after their video successfully moves.
+* --cleanup-empty removes only empty source subdirectories touched by successful
+  moves. It never removes the source root or deletes leftover files.
+* Symlinks, Windows junctions and other reparse points are rejected.
+* Re-running on the same completed input performs no additional moves.
+* Messages report skips and failures, followed by a JSON count summary.
+  Exit codes: 0 = completed (possibly with skips), 1 = operation/scan failure,
+  2 = invalid arguments or configuration. A zero exit code does not imply that
+  every input was recognized; review SKIP messages.
 
-sourcedir
-   the directory the script will search for files ending in an extension specified in extensions
+File recognition
+----------------
+Supported video extensions: mkv, avi, mp4, ts, m4v, mov, webm.
+Supported sidecars: srt, ass, ssa, vtt, sub, idx, srr (case-insensitive).
+Examples:
 
-extensions
-   specify which extensions to match. ex. ["mkv", "avi", "myextension", "mp4"]
+  The.Office.S06E03.mkv       -> TV/The Office/Season 6/The Office S06 E03.mkv
+  Show.S01E01E02.mkv          -> TV/Show/Season 1/Show S01 E01E02.mkv
+  Show.10x101.mkv             -> TV/Show/Season 10/Show S10 E101.mkv
+  News.2024.03.05.mkv         -> TV/News/News Mar 05 2024.mkv
+  Movie.2020.2160p.mkv        -> Movies/Movie (2020).mkv
 
-min_size
-   Files below this size, in megabytes (MB) will be ignored
+Spaces, dots and underscores are accepted as separators. Spelling, hyphenated
+titles, Unicode, acronyms and country identifiers are preserved. Dates must
+be real calendar dates. Entire 32/40/64-character hexadecimal basenames use
+their parent folder name for recognition. A mere hexadecimal prefix does not.
 
-----------------------------------------------------------------------------------------
+Ambiguous plain titles, quality-only movie names, compact episode numbers
+(Show.101), and episode ranges (S01E01-E03) are skipped. Use explicit
+S01E01E02 notation for multiple episodes. No online metadata lookup is made;
+the parser cannot guarantee that a year is a release year rather than part of
+a title. Release-group prefixes are not automatically removed.
 
-overwrite
-   Set to True to overwrite files in the destination directory with ones from the source.
+Naming templates
+----------------
+Both / and backslash separators are accepted. Templates must be relative,
+with no empty components, . or ... Invalid characters in generated filename
+components are replaced with underscores; Windows reserved names are prefixed
+with an underscore. Missing fields or unknown tokens cause a skip/error rather
+than silently producing a fallback name. Templates do not include extensions.
 
-remove_CC
-   Set to True to remove country codes such as US, UK, DE, NL, BR from filenames -- specified in COUNTRIES
+All: %t title, %T uppercase title, %o original basename, %% literal percent.
+Episodes: %s season, %0s padded season, %e episodes, %0e padded episodes.
+Dated shows: %y year, %m month, %0m padded month, %d day, %0d padded day,
+             %fm month name, %FM uppercase month, %sm abbreviation,
+             %SM uppercase abbreviation.
+Movies: %y year, %q quality (2160p/4k/8k etc., only if recognized).
 
-verbose
-   Set to True to get command line output
+Migration from 2.3
+------------------
+Old editable globals are replaced by CLI arguments / TOML:
+  sourcedir -> source; tvdest -> tv; moviedest -> movies;
+  min_size -> min_size_mb; undated_fs/dated_fs/movie_fs keep their names;
+  satellites -> satellites or --no-satellites;
+  no_rename -> preview is now the default; use --apply to move files.
 
-truncate
-   Set to True to enable 80-char wide output truncation
+Removed: overwrite, remove_CC, clean_mode, remove_src, notify/pynotify,
+stay_open/raw_input, truncate, and silent exception handling. Old cleanup=True
+does not carry over; the replacement cleanup_empty defaults to false.
+Legacy globals or unknown config keys are rejected, not silently accepted.
 
-satellites
-   Set to True to move satellite files such as subtitles to the destination along with the files they are related to.
+Limitations
+-----------
+Verified copying is slower than renaming on one disk and requires free space
+for another full copy of the file. File contents and modification time are
+preserved; ownership, ACLs, alternate streams, and extended attributes are not
+promised. POSIX publication requires hard-link support on the destination
+filesystem. Unsupported filesystems fail with the source retained.
 
-cleanup
-   Set to True to attempt cleanup of directories which had files removed
+This is not a transaction across an entire video/subtitle group. A subtitle
+failure can leave that subtitle in the source after its video moved. If source
+removal fails, two complete copies may remain; the next run skips the existing
+destination. A killed process can leave a .turbo-sort-*.partial temporary file;
+inspect it manually. There is no automatic recovery or undo journal.
 
-clean_mode
-   1 : Remove files that have the same filenames ignoring the extension. Then, check for empty directories to remove. E.g. remove dir/this.file.par2 when dir/this.file.mkv was processed and then remove dir/. 
-   2 : Remove entire directories after files have been removed. If another file with matching video extension and size above min_size is found then the directory will not be removed.
+Source stat checks detect ordinary changes during processing, but do not lock
+out writers. Filesystem races, hostile directory replacement, arbitrary
+concurrent edits, and power-loss durability are not guaranteed. Run against
+trusted, completed files with one organizer instance at a time.
 
-notify
-   Set to true to enable popup notifications instead of shell output. This option supersedes truncate and verbose.
-   YOU MUST INSTALL PYNOTIFY TO USE THIS FUNCTION!! http://home.gna.org/py-notify/      
+Tests
+-----
+  python -m unittest -v test_turbo_sort
+  python beta_scenarios.py
 
-stay_open
-   Set to True to keep the shell window open after script has finished execution
-
-no_rename
-   Set to True to disable the script from performing file operations (will only display output)
-
-remove_src
-   Set to True to allow the cleanup function to remove sourcedir.
-+----------------+
-| Format Strings |
-+----------------+
-All format strings support:
-   %t - Title of the movie or show
-   %T - TITLE of the movie or show in caps
-   %o - The original filename (not including extension)
-
-undated_fs
-   Format string for shows without a date. Specific options include:
-     %e  - Episode number
-     %0e - Zero-padded episode number
-     %s  - Season number
-     %0s - Zero-padded season number
-     
-dated_fs
-   Format string for shows with a date. Specific options include:
-     %0m - Zero-padded month (e.g. 03)
-     %m  - Month (e.g. 3)
-     %fm - Month (e.g. March)
-     %FM - MONTH (e.g. MARCH)
-     %sm - Mon (e.g. Mar)
-     %SM - MON (e.g. MAR)
-     %0d - Zero-padded day
-     %d  - Day
-     %y  - Year (e.g. 2011)
-
-movie_fs
-   Format string for movies. Specific options include:
-     %y  - Year (e.g. 2011)
-     %q  - Quality (e.g. 1080p)
-
-+----------+
-| Examples |
-+----------+
-undated_fs:
-    "%t/Season %s/%t S%0s E%0e"     - The Office/Season 6/The Office S06 E03.mkv
-    "Shows/%T Season %s/%t S%s E%e" - Shows/THE OFFICE Season 6/The Office S6 E3.mkv
-    "%t/%o"                         - The Office/The.Office.S06E03.720p.EVOLVE.mkv
-
-dated_fs:
-    "%t/%t %sm %0d %y"      - The Daily Show/The Daily Show Mar 05 2012.mkv
-    "%t/%y/%fm/%t %y-%m-%d" - The Daily Show/2012/March/The Daily Show 2012-3-5.mkv
-
-movie_fs:
-    "%t (%y)"  - Pulp Fiction (1994).mkv
-    "%q/%t %y" - 1080p/Pulp Fiction 1994.mkv
-    "%y/%t"    - 1994/Pulp Fiction.mkv
+All tests create disposable temporary directories and never use your media
+library. See BETA_REPORT.md for tested versions, results and remaining limits.

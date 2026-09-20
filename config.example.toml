@@ -1,0 +1,11 @@
+# Python 3.11+; copy to config.toml and set your directories.
+# TOML single-quoted paths preserve backslashes.
+source = 'C:\Downloads\Completed'
+tv = 'C:\Media\TV'
+movies = 'C:\Media\Movies'
+min_size_mb = 100
+satellites = true
+cleanup_empty = false
+undated_fs = '%t/Season %s/%t S%0s E%0e'
+dated_fs = '%t/%t %sm %0d %y'
+movie_fs = '%t (%y)'
