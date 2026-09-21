@@ -1,135 +1,206 @@
-Turbo Sort 3.0 beta
-===================
+# Turbo Sort 3.0 beta
 
-Preview-first movie and TV file organization for Python 3.11 and newer.
-No third-party packages are required. Derived from Michael Riha's turbo_sort
-v2.3; GPL-3.0-or-later (see LICENSE.txt). This beta changes the configuration
-interface and intentionally removes destructive legacy behavior.
+**Turbo Sort sorts your movie and TV files into folders and gives them clearer names.**
 
-Quick start
------------
-Install a supported Python 3.11+ interpreter. Open a terminal in this folder.
-Preview (no files or directories are changed):
+For example, it can turn this:
 
-  python turbo_sort.py --source "C:\Downloads\Completed" --tv "C:\Media\TV" --movies "C:\Media\Movies"
+```text
+The.Office.S06E03.mkv
+```
 
-After reviewing the output, repeat the command with --apply to perform moves.
-The default minimum video size is 100 MiB. Use --min-size-mb 0 for small samples.
-Only process completed downloads; stop downloaders or other writers first.
-Source and destination directories must be separate, non-overlapping trees.
+into this:
 
-Alternatively edit a copy of config.example.toml and run:
+```text
+TV
+└── The Office
+    └── Season 6
+        └── The Office S06 E03.mkv
+```
 
-  python turbo_sort.py --config config.toml
-  python turbo_sort.py --config config.toml --apply
+It works from the names of your files. It does not look up movies or shows online.
 
-If you prefer a guided setup, run:
+**Nothing moves until you tell it to.** Your first run shows you what it plans to do.
 
-  python turbo_setup.py
+This is a beta version, which means it is still being tested. Start with copies of a few files before using your whole collection.
 
-The wizard asks for folders and naming choices such as padded `S03` versus
-`S3`, and `Season 3` versus `S03`. It previews an example, validates the
-choices, writes `config.toml` atomically, and saves an existing configuration
-as `config.toml.bak`. It never edits this Python sorter or moves files.
+## 1. Get ready
 
-CLI settings override configuration entries. Relative paths are relative to
-the current working directory. Neither a TOML file nor an import can turn on
---apply: it must be explicitly supplied on the command line.
+You need:
 
-Behavior and safety
--------------------
-* A complete plan is built before file moves start.
-* Existing destinations are never overwritten, even when they appear after
-  planning. Multiple inputs targeting one name are all skipped.
-* Each move copies into a temporary file in the destination directory,
-  flushes it, checks its size and SHA-256 hash, publishes it without replacing
-  another file, and only then removes the unchanged source.
-* Subtitle languages and qualifiers survive: .en.srt and .fr.forced.srt stay
-  separate. Subtitles only move after their video successfully moves.
-* --cleanup-empty removes only empty source subdirectories touched by successful
-  moves. It never removes the source root or deletes leftover files.
-* Symlinks, Windows junctions and other reparse points are rejected.
-* Re-running on the same completed input performs no additional moves.
-* Messages report skips and failures, followed by a JSON count summary.
-  Exit codes: 0 = completed (possibly with skips), 1 = operation/scan failure,
-  2 = invalid arguments or configuration. A zero exit code does not imply that
-  every input was recognized; review SKIP messages.
+- Python version 3.11 or newer installed on your computer.
+- The Turbo Sort program files.
+- Some finished movie or TV downloads to organize.
 
-File recognition
-----------------
-Supported video extensions: mkv, avi, mp4, ts, m4v, mov, webm.
-Supported sidecars: srt, ass, ssa, vtt, sub, idx, srr (case-insensitive).
-Examples:
+Python is the software that runs Turbo Sort. You do not need to know how to write Python code.
 
-  The.Office.S06E03.mkv       -> TV/The Office/Season 6/The Office S06 E03.mkv
-  Show.S01E01E02.mkv          -> TV/Show/Season 1/Show S01 E01E02.mkv
-  Show.10x101.mkv             -> TV/Show/Season 10/Show S10 E101.mkv
-  News.2024.03.05.mkv         -> TV/News/News Mar 05 2024.mkv
-  Movie.2020.2160p.mkv        -> Movies/Movie (2020).mkv
+Decide which three folders you want to use:
 
-Spaces, dots and underscores are accepted as separators. Spelling, hyphenated
-titles, Unicode, acronyms and country identifiers are preserved. Dates must
-be real calendar dates. Entire 32/40/64-character hexadecimal basenames use
-their parent folder name for recognition. A mere hexadecimal prefix does not.
+| Folder | What it is for | Example |
+|---|---|---|
+| Starting folder | Files waiting to be sorted | `C:\Downloads\Completed` |
+| TV folder | Where sorted TV episodes go | `C:\Media\TV` |
+| Movies folder | Where sorted movies go | `C:\Media\Movies` |
 
-Ambiguous plain titles, quality-only movie names, compact episode numbers
-(Show.101), and episode ranges (S01E01-E03) are skipped. Use explicit
-S01E01E02 notation for multiple episodes. No online metadata lookup is made;
-the parser cannot guarantee that a year is a release year rather than part of
-a title. Release-group prefixes are not automatically removed.
+These are examples. Use your own folders.
 
-Naming templates
-----------------
-Both / and backslash separators are accepted. Templates must be relative,
-with no empty components, . or ... Invalid characters in generated filename
-components are replaced with underscores; Windows reserved names are prefixed
-with an underscore. Missing fields or unknown tokens cause a skip/error rather
-than silently producing a fallback name. Templates do not include extensions.
+**Keep the three folders separate.** Do not put one inside another.
 
-All: %t title, %T uppercase title, %o original basename, %% literal percent.
-Episodes: %s season, %0s padded season, %e episodes, %0e padded episodes.
-Dated shows: %y year, %m month, %0m padded month, %d day, %0d padded day,
-             %fm month name, %FM uppercase month, %sm abbreviation,
-             %SM uppercase abbreviation.
-Movies: %y year, %q quality (2160p/4k/8k etc., only if recognized).
+Wait for downloads to finish, and stop any programs that might still be changing those files.
 
-Migration from 2.3
-------------------
-Old editable globals are replaced by CLI arguments / TOML:
-  sourcedir -> source; tvdest -> tv; moviedest -> movies;
-  min_size -> min_size_mb; undated_fs/dated_fs/movie_fs keep their names;
-  satellites -> satellites or --no-satellites;
-  no_rename -> preview is now the default; use --apply to move files.
+## 2. Open a command window
 
-Removed: overwrite, remove_CC, clean_mode, remove_src, notify/pynotify,
-stay_open/raw_input, truncate, and silent exception handling. Old cleanup=True
-does not carry over; the replacement cleanup_empty defaults to false.
-Legacy globals or unknown config keys are rejected, not silently accepted.
+Turbo Sort runs using typed instructions called **commands**.
 
-Limitations
------------
-Verified copying is slower than renaming on one disk and requires free space
-for another full copy of the file. File contents and modification time are
-preserved; ownership, ACLs, alternate streams, and extended attributes are not
-promised. POSIX publication requires hard-link support on the destination
-filesystem. Unsupported filesystems fail with the source retained.
+On Windows:
 
-This is not a transaction across an entire video/subtitle group. A subtitle
-failure can leave that subtitle in the source after its video moved. If source
-removal fails, two complete copies may remain; the next run skips the existing
-destination. A killed process can leave a .turbo-sort-*.partial temporary file;
-inspect it manually. There is no automatic recovery or undo journal.
+1. Open the folder containing `turbo_sort.py` and `turbo_setup.py`.
+2. Click the address bar at the top of the folder window.
+3. Type `powershell` and press **Enter**.
 
-Source stat checks detect ordinary changes during processing, but do not lock
-out writers. Filesystem races, hostile directory replacement, arbitrary
-concurrent edits, and power-loss durability are not guaranteed. Run against
-trusted, completed files with one organizer instance at a time.
+A command window opens. You can paste the commands below into it and press **Enter** to run them.
 
-Tests
------
-  python -m unittest -v test_turbo_sort
-  python -m unittest -v test_turbo_setup
-  python beta_scenarios.py
+To check whether Python is ready, enter:
 
-All tests create disposable temporary directories and never use your media
-library. See BETA_REPORT.md for tested versions, results and remaining limits.
+```text
+python --version
+```
+
+You should see a version number of **3.11 or higher**.
+
+If Windows says it cannot find Python, or opens the Microsoft Store instead, Python is not ready to use through this command. Finish installing or setting up Python before continuing.
+
+## 3. Run the guided setup
+
+Enter:
+
+```text
+python turbo_setup.py
+```
+
+The setup asks which folders you want to use and how you want files and folders named.
+
+For example, it may ask whether season three should look like:
+
+- `Season 3`
+- `S03`
+
+It shows you an example of your choices.
+
+When you finish, it saves your settings in a file called `config.toml`. If that file already exists, setup saves the previous version as `config.toml.bak`.
+
+**Setup only saves settings. It does not move your videos.**
+
+## 4. Preview the changes
+
+Enter:
+
+```text
+python turbo_sort.py --config config.toml
+```
+
+Turbo Sort shows what it plans to do.
+
+**This is only a preview. It does not change your files or folders.**
+
+Read the results. Check that:
+
+- Shows and movies have the right names.
+- TV episodes have the right season and episode numbers.
+- Files are going into the folders you intended.
+
+A message marked `SKIP` means Turbo Sort is leaving that file alone. Check the reason beside it.
+
+If something looks wrong, run setup again and then repeat the preview.
+
+## 5. Move the files
+
+When you are happy with the preview, enter:
+
+```text
+python turbo_sort.py --config config.toml --apply
+```
+
+**The extra word `--apply` tells Turbo Sort to actually move the files.**
+
+It copies each video to its new location, checks that the copy matches, and then removes the original.
+
+There is no automatic undo. Check the preview carefully.
+
+## Why did it skip a file?
+
+Some common reasons:
+
+- **The file is too small.** By default, Turbo Sort ignores videos smaller than about 100 MB.
+- **The name is unclear.** It needs enough information to recognize the movie or episode.
+- **The destination already has that filename.** Turbo Sort will not replace an existing file.
+- **Two files would get the same destination name.** Turbo Sort skips both.
+- **The file type is unsupported.**
+
+For testing with small videos, preview using:
+
+```text
+python turbo_sort.py --config config.toml --min-size-mb 0
+```
+
+To move those small videos after checking the preview, use:
+
+```text
+python turbo_sort.py --config config.toml --min-size-mb 0 --apply
+```
+
+## What filenames does it understand?
+
+These are examples of names it recognizes:
+
+| Filename | Meaning |
+|---|---|
+| `The.Office.S06E03.mkv` | The Office, season 6, episode 3 |
+| `Show.S01E01E02.mkv` | One file containing episodes 1 and 2 |
+| `Show.10x101.mkv` | Season 10, episode 101 |
+| `News.2024.03.05.mkv` | An episode dated March 5, 2024 |
+| `Movie.2020.2160p.mkv` | A movie named “Movie,” with year 2020 |
+
+Spaces, dots, and underscores can separate words.
+
+Names such as `Show.101.mkv` or `Movie.1080p.mkv` are too unclear and are skipped.
+
+Episode ranges such as `S01E01-E03` are also skipped. Multiple episodes must be listed explicitly, such as `S01E01E02E03`.
+
+Because Turbo Sort reads filenames without checking online, it can make mistakes. For example, it may mistake a year in a title for the movie’s release year.
+
+## Which file types work?
+
+**Videos:** MKV, AVI, MP4, TS, M4V, MOV, and WEBM.
+
+**Accompanying files:** SRT, ASS, SSA, VTT, SUB, IDX, and SRR.
+
+Matching subtitle files move after their video moves successfully. Language labels such as `.en.srt` and `.fr.forced.srt` are kept.
+
+## Things to know before sorting a large collection
+
+- **Leave enough free space.** Turbo Sort temporarily needs room for another full copy of the file it is moving.
+- **Existing files are not overwritten.**
+- **Run only one copy of Turbo Sort at a time.**
+- **Do not download into or edit files while they are being sorted.**
+- **Check skipped files and errors.** Finishing a run does not necessarily mean every file was sorted.
+- **A subtitle can fail even if its video moves successfully.** Check for subtitles left in the starting folder.
+- **If removing the original fails, you may have two copies.**
+- **If the program is interrupted, it may leave a temporary file with `.turbo-sort-` in its name and `.partial` at the end.** Check it before deciding what to do with it.
+
+## Already using Turbo Sort 2.3?
+
+Version 3 uses a different settings system.
+
+Run the guided setup to create a new configuration. Do not copy your old settings into the Python program.
+
+Preview is now the default. You must add `--apply` to move files.
+
+Several older options, including overwriting files and deleting leftover files, have been removed.
+
+## Credits and license
+
+Based on Michael Riha’s Turbo Sort v2.3.
+
+Licensed under GPL-3.0-or-later. See `LICENSE.txt`.
+
+For testing details and known technical limits, see `BETA_REPORT.md`.
