@@ -172,7 +172,9 @@ def parse_media(path: Path) -> Media:
     quality = quality_match[1].lower() if quality_match else None
     episode_match = EPISODE.search(name) or X_EPISODE.search(name)
     if episode_match:
-        if re.match(r"-e?\d", name[episode_match.end():], re.I):
+        trailing = name[episode_match.end():]
+        if re.match(r"(?:[ ._]*[-–—][ ._]*(?:(?:s\d{1,2})?e|\d{1,2}x)?\d"
+                    r"|[ ._]+(?:s\d{1,2}e|e|\d{1,2}x)\d)", trailing, re.I):
             raise ValueError("Episode ranges are ambiguous; use explicit S01E01E02 notation")
         if episode_match.re is EPISODE:
             episodes = tuple(int(n) for n in re.findall(r"e(\d+)", episode_match["episodes"], re.I))

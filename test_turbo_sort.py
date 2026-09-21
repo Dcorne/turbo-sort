@@ -88,9 +88,18 @@ class ParsingTests(unittest.TestCase):
         self.assertEqual(ts.format_media(ts.parse_media(Path("Movie.2020.mkv")), "%% %t"), Path("% Movie"))
 
     def test_episode_ranges_not_truncated(self):
-        for name in ("Show.S01E01-E03.mkv", "Show.1x01-03.mkv"):
+        for name in ("Show.S01E01-E03.mkv", "Show.1x01-03.mkv",
+                     "Show.S01E01-S01E03.mkv", "Show.S01E01 - E03.mkv",
+                     "Show.S01E01.E02.mkv", "Show.S01E01_E02.mkv",
+                     "Show.1x01 - 1x03.mkv", "Show.S01E01–E03.mkv"):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 ts.parse_media(Path(name))
+
+    def test_episode_release_suffixes_still_accepted(self):
+        for name in ("Show.S01E01.1080p.mkv", "Show.S01E01-Group.mkv",
+                     "Show.S01E01.Episode.Title.mkv"):
+            with self.subTest(name=name):
+                self.assertEqual(ts.parse_media(Path(name)).episodes, (1,))
 
     def test_underscore_movie_year_quality(self):
         media = ts.parse_media(Path("My_Movie_2020_2160p.mkv"))
@@ -133,6 +142,16 @@ class FileTests(unittest.TestCase):
         self.assertEqual(before, sorted(str(p) for p in self.root.rglob("*")))
         self.assertEqual(result["moved"], 0)
         self.assertEqual(video.read_bytes(), b"video content")
+
+    def test_ambiguous_ranges_and_subtitles_remain_in_source(self):
+        video = self.write("Show.S01E01-S01E03.mkv")
+        subtitle = self.write("Show.S01E01-S01E03.en.srt")
+        result = self.run_plan()
+        self.assertEqual(result["moved"], 0)
+        self.assertEqual(result["skipped"], 1)
+        self.assertTrue(video.exists())
+        self.assertTrue(subtitle.exists())
+        self.assertFalse(self.config.tv.exists())
 
     def test_move_and_rerun(self):
         video = self.write("Movie.2020.mkv")

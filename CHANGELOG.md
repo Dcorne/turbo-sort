@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Reject ambiguous episode ranges with repeated season numbers, spaces, or
+separated episode tokens instead of silently keeping only the first episode.
+Preserve apostrophes, backslashes, and Unicode in generated TOML strings, and
+validate generated TOML before replacing a configuration or its backup.
+Add regression tests for both fixes and source-file retention.
+
 ## 3.0.0b1 — 2026-09-20
 
 Modernize the supplied v2.3 script for Python 3.11+ with typed dataclasses,

@@ -7,10 +7,12 @@ This program writes config.toml; it never edits turbo_sort.py and never moves fi
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import shutil
 import sys
 import tempfile
+import tomllib
 
 import turbo_sort
 
@@ -93,8 +95,11 @@ def build_config(input_fn=input) -> dict[str, object]:
 
 def toml_value(value: object) -> str:
     if isinstance(value, Path):
-        # TOML basic strings require escaping backslashes; forward slashes are portable.
-        return "'" + str(value).replace("\\", "/").replace("'", "''") + "'"
+        value = str(value)
+    if isinstance(value, str):
+        # JSON string escaping also works for TOML basic strings. Keep Unicode
+        # literal to avoid JSON surrogate pairs, which TOML does not accept.
+        return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007f")
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, float) and value.is_integer():
@@ -114,6 +119,8 @@ def render(config: dict[str, object]) -> str:
 
 
 def write_config(config: dict[str, object], target: Path) -> Path:
+    content = render(config)
+    tomllib.loads(content)  # Validate before touching an existing config or backup.
     target = target.expanduser().absolute()
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.exists():
@@ -121,7 +128,7 @@ def write_config(config: dict[str, object], target: Path) -> Path:
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=target.parent,
                                      prefix=f".{target.name}.", suffix=".tmp", delete=False) as file:
         temporary = Path(file.name)
-        file.write(render(config))
+        file.write(content)
         file.flush()
     temporary.replace(target)
     return target
